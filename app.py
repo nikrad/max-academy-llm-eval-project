@@ -95,12 +95,13 @@ async def on_message(message: cl.Message):
 
         document_summary = text_chunk_summaries
         cl.user_session.set("document_summary", document_summary)
-        document_summary_string = "\n\n".join(document_summary)
         message_history = [
             {"role": "system", "content": SYSTEM_PROMPT_FOR_SUMMARY},
             {
                 "role": "user",
-                "content": f"Here are the document section summaries:\n\n{document_summary_string}",
+                "content": "Here are the document section summaries:\n\n{}".format(
+                    "\n\n".join(document_summary)
+                ),
             },
         ]
         await cl.Message(
