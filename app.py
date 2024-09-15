@@ -22,6 +22,7 @@ model_kwargs = {"model": "chatgpt-4o-latest", "temperature": 0.25, "max_tokens":
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=250)
 
+
 @traceable
 @cl.on_chat_start
 async def on_chat_start():
@@ -45,6 +46,7 @@ async def on_chat_start():
         content=f"What kind of summary would you like for `{files[0].name}`? For example, how long should it be, and do you want it as bullets or sentences)?"
     ).send()
 
+
 @traceable
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -52,10 +54,12 @@ async def on_message(message: cl.Message):
     ask_file_response = cl.user_session.get("ask_file_response")
     document_summary = cl.user_session.get("document_summary", None)
     message_history = cl.user_session.get("message_history", [])
-    
-    if document_summary is None:       
+
+    if document_summary is None:
         file_type = ask_file_response.type
-        msg = await cl.Message(content=f"Processing `{ask_file_response.name}`...").send()
+        msg = await cl.Message(
+            content=f"Processing `{ask_file_response.name}`..."
+        ).send()
         text = None
         with open(ask_file_response.path, "rb") as f:
             content = f.read()
@@ -73,7 +77,10 @@ async def on_message(message: cl.Message):
         text_chunks = text_splitter.split_text(text)
         text_chunk_summaries = []
         for i, text_chunk in enumerate(text_chunks):
-            await cl.Message(id=msg.id, content=f"Reviewing chunk {i + 1} of {len(text_chunks)} in `{ask_file_response.name}`...").update()
+            await cl.Message(
+                id=msg.id,
+                content=f"Reviewing chunk {i + 1} of {len(text_chunks)} in `{ask_file_response.name}`...",
+            ).update()
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT_FOR_TEXT_CHUNK},
                 {
@@ -88,13 +95,25 @@ async def on_message(message: cl.Message):
 
         document_summary = text_chunk_summaries
         cl.user_session.set("document_summary", document_summary)
-        message_history = [{"role": "system", "content": SYSTEM_PROMPT_FOR_SUMMARY}, {"role": "user", "content": f"Here are the document section summaries:\n\n{"\n\n".join(document_summary)}"}]
-        await cl.Message(id=msg.id, content=f"Summarizing `{ask_file_response.name}`...").update()
+        message_history = [
+            {"role": "system", "content": SYSTEM_PROMPT_FOR_SUMMARY},
+            {
+                "role": "user",
+                "content": f"Here are the document section summaries:\n\n{'\n\n'.join(document_summary)}",
+            },
+        ]
+        await cl.Message(
+            id=msg.id, content=f"Summarizing `{ask_file_response.name}`..."
+        ).update()
     else:
-        msg = await cl.Message(content=f"Summarizing `{ask_file_response.name}`...").send()
+        msg = await cl.Message(
+            content=f"Summarizing `{ask_file_response.name}`..."
+        ).send()
 
     message_history.append({"role": "user", "content": message.content})
-    stream = await client.chat.completions.create(messages=message_history, stream=True, **model_kwargs)
+    stream = await client.chat.completions.create(
+        messages=message_history, stream=True, **model_kwargs
+    )
 
     await msg.remove()
     response_msg = await cl.Message(content=f"Done! Here is your summary:\n\n").send()
